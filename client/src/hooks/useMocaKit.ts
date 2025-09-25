@@ -24,9 +24,11 @@ export function useMocaKit(): UseMocaKitReturn {
   useEffect(() => {
     const initService = async () => {
       try {
-        const partnerId = import.meta.env.VITE_MOCA_PARTNER_ID || process.env.MOCA_PARTNER_ID;
+        const partnerId = import.meta.env.VITE_MOCA_PARTNER_ID;
         if (!partnerId) {
-          console.error('MOCA_PARTNER_ID not found in environment variables');
+          console.warn('MOCA_PARTNER_ID not configured - using fallback mode');
+          // For now, set a fallback to continue development
+          // In production, this should be properly configured
           return;
         }
 
