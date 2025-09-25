@@ -1,0 +1,1507 @@
+Quickstart: Login & User Onboarding
+Account integration and user onboarding is the foundation of any application.
+If you're here, your primary focus is seamless onboarding, authentication, and session management.
+
+With the AIR Kit, you can:
+
+Enable SSO login for your users
+Provide wallet services similar to a decentralized identity provider
+Establish secure user sessions
+Manage the lifecycle of sessions within your app
+This guide will walk you through:
+
+Setting up AIR Kit
+Implementing login flows
+Utilizing embedded wallet features
+TIP
+
+If your app doesn’t require credential issuance or verification yet, this Quickstart alone is enough to get you up and running.
+
+Step 1: Install the SDK
+
+npm install @mocanetwork/airkit
+Step 2: Get Your Partner ID
+Go to the Developer Dashboard and login with your EOA wallet.
+Connect your wallet.Wallet connect
+Navigate to the Account Section on the navigation bar on the left. Then go to the General page. Copy the Partner ID from the partner account information and settings.Quickstart - get partner ID
+If you’re looking to customise the theme, login flow, or localization, please see the relevant sections for more details.
+Step 3: Import, Initialize & Login
+File: ./useAirKit.ts
+
+
+import { AirService, BUILD_ENV } from "@mocanetwork/airkit";
+
+const service = new AirService({
+  partnerId: YOUR_PARTNER_ID, // Replace with your actual Partner ID
+  env: BUILD_ENV.SANDBOX
+});
+
+// Trigger the login flow
+await service.init();
+const loggedInResult = await service.login();
+☑️ This will:
+
+Initialize the AirService within the Sandbox Environment
+Present the SSO Login screen of AIR Kit for users to log in
+Handle authentication and session setup
+Enable Account Services (such as wallet functions), and Credential Services (such as credential verification) for your app after the user is logged in
+What You Get After Login
+Once login is complete, you’ll have access to:
+
+User UUID
+Session token
+User metadata
+Next Steps
+Once you've set up account and sessions, you can optionally move on to Issue Credentials and Verify Credentials if your app needs credential-based access control.
+
+Otherwise, you may explore our documentation on how to utilize AIR Kit's Account Services
+
+Wallet Functions
+AIR Kit provides comprehensive wallet functionality that allows you to interact with blockchain networks, manage smart accounts, and perform transactions. The wallet system is built on top of EIP-1193 standards and supports multiple blockchain networks.
+
+Wallet Preloading
+preloadWallet()
+Preloads the wallet service to improve performance by initializing the wallet infrastructure before it's needed.
+
+Method Signature:
+
+
+public async preloadWallet(): Promise<void>
+Usage:
+
+
+try {
+  await airService.preloadWallet();
+  console.log("Wallet preloaded successfully");
+} catch (error) {
+  console.error("Failed to preload wallet:", error);
+}
+Important notes:
+
+The wallet can be preloaded even before the user is logged in
+Improves response time for subsequent wallet operations
+Even if preloading hasn't finished, using the provider or any other wallet operation will ensure that the wallet is done initializing before executing the actual call
+Requirements:
+
+Service must be initialized
+EIP-1193 Wallet Provider
+getProvider()
+Returns an EIP-1193 compatible provider that works seamlessly with popular Web3 libraries such as web3, ethers, and Viem.
+
+Method Signature:
+
+
+getProvider(): EIP1193Provider
+Returns: An EIP-1193 compatible provider object with the following interface:
+
+
+interface EIP1193Provider {
+  request(request: AirProviderParameters): Promise<unknown>;
+  on<EventName extends keyof EIP1193EventMap>(
+    event: EventName,
+    listener: EIP1193EventMap[EventName]
+  ): void;
+  removeListener<EventName extends keyof EIP1193EventMap>(
+    event: EventName,
+    listener: EIP1193EventMap[EventName]
+  ): void;
+}
+Supported Events:
+
+
+type EIP1193EventMap = {
+  accountsChanged(accounts: string[]): void;
+  chainChanged(chainId: string): void;
+  connect(connectInfo: ProviderConnectInfo): void;
+  disconnect(error: ProviderRpcError): void;
+  message(message: ProviderMessage): void;
+};
+Requirements:
+
+User must be logged in
+Standard RPC Methods
+The provider also supports all standard EIP-1193 methods:
+
+
+// Get accounts
+const accounts = await provider.request({ method: "eth_accounts" });
+
+// Request accounts
+const accounts = await provider.request({ method: "eth_requestAccounts" });
+
+// Get chain ID
+const chainId = await provider.request({ method: "eth_chainId" });
+
+// Send transaction
+const txHash = await provider.request({
+  method: "eth_sendTransaction",
+  params: [transactionParams]
+});
+
+// Sign message
+const signature = await provider.request({
+  method: "personal_sign",
+  params: [message, address]
+});
+
+// Switch chain
+await provider.request({
+  method: "wallet_switchEthereumChain",
+  params: [{ chainId: "0x2105" }] // Base mainnet
+});
+
+// And more standard RPC calls
+Wallet Events
+The EIP-1193 provider supports standard wallet events:
+
+
+const provider = airService.getProvider();
+
+// Listen for account changes
+provider.on("accountsChanged", (accounts) => {
+  console.log("Accounts changed:", accounts);
+});
+
+// Listen for chain changes
+provider.on("chainChanged", (chainId) => {
+  console.log("Chain changed to:", chainId);
+});
+
+// Listen for connection events
+provider.on("connect", (connectInfo) => {
+  console.log("Wallet connected:", connectInfo);
+});
+
+// Listen for disconnects
+provider.on("disconnect", (error) => {
+  console.log("Wallet disconnected:", error);
+});
+
+
+Supported Chains
+AIR Kit supports multiple blockchain networks. The available chains depend on your partner configuration.
+
+Mainnet Chains:
+
+Base (Chain ID: 8453) - Default mainnet chain
+BSC (Chain ID: 56)
+Gnosis (Chain ID: 100)
+Kaia (Chain ID: 24)
+Soneium (Chain ID: 1946)
+Testnet Chains:
+
+Base Sepolia (Chain ID: 84532) - Default testnet chain
+BSC Testnet (Chain ID: 97)
+Gnosis Chiado (Chain ID: 10200)
+Kairos (Chain ID: 24)
+Soneium Minato (Chain ID: 1946)
+Sepolia (Chain ID: 11155111)
+Devnet Chains:
+
+Moca Devnet (Chain ID: 5151)
+Chain Configuration
+Chains are configured per partner through the partner configuration:
+
+
+// Partner configuration example
+{
+  chainId: "8453", // Default chain (Base mainnet)
+  enabledChainIds: ["8453", "56", "100"] // All supported chains of that partner
+}
+
+
+
+Built-in UI (Beta)
+Swap Interface
+showSwapUI()
+Opens the AIR Kit swap interface, allowing users to exchange tokens directly within your application.
+
+Method Signature:
+
+
+public async showSwapUI(): Promise<{ txHash: `0x${string}` }>
+Returns:
+
+
+{
+  txHash: string; // The transaction hash of the swap transaction
+}
+Usage:
+
+
+try {
+  const result = await airService.showSwapUI();
+  console.log("Swap completed! Transaction hash:", result.txHash);
+} catch (error) {
+  console.error("Swap failed:", error);
+}
+What happens during swap:
+
+Opens the swap interface
+User selects token and amount to swap
+User confirms the swap transaction
+Returns the transaction hash upon successful completion
+Requirements:
+
+User must be logged in
+Important Notes:
+
+Experimental feature: This method is marked as experimental and may change in future versions
+Chain support: Currently only supported on Base network
+User experience: Opens a full swap interface with token selection, amount input, and slippage settings.
+Advanced control: For more control over the swap flow, use the RPC method air_getSwapQuote and air_sendSwapTransaction to specify exact token addresses, amounts, and slippage settings
+On-Ramp Interface
+showOnRampUI()
+Opens the AIR Kit on-ramp interface, allowing users to purchase cryptocurrency with fiat currency.
+
+Method Signature:
+
+
+public async showOnRampUI(options: {
+  displayCurrencyCode: string;
+  targetCurrencyCode?: string;
+}): Promise<void>
+Parameters:
+
+
+{
+  displayCurrencyCode: string; // Fiat currency code (e.g., "USD", "EUR")
+  targetCurrencyCode?: string; // Optional target cryptocurrency (e.g., "ETH", "USDC")
+}
+Usage:
+
+
+try {
+  await airService.showOnRampUI({
+    displayCurrencyCode: "USD",
+    targetCurrencyCode: "USDC"
+  });
+  console.log("On-ramp interface opened");
+} catch (error) {
+  console.error("Failed to open on-ramp:", error);
+}
+What happens during on-ramp:
+
+Opens the on-ramp interface
+User selects payment method and amount
+User completes the fiat-to-crypto purchase
+Cryptocurrency is deposited to their wallet
+Requirements:
+
+User must be logged in
+Important Notes:
+
+Experimental feature: This method is marked as experimental and may change in future versions
+No return value: This method doesn't return a transaction hash as the purchase is handled by the on-ramp provider
+Currency support: Supported currencies depend on the on-ramp provider configuration
+
+
+Session Key Management (Beta)
+AIR Kit extends the standard EIP-1193 provider with custom RPC methods for advanced functionality.
+
+air_listSessionKeyScopes
+
+
+const scopes = await provider.request({
+  method: "air_listSessionKeyScopes",
+  params: [chainId] // optional chain ID
+});
+// Returns: ActionPolicyInfo[]
+air_grantPermissions
+
+
+const result = await provider.request({
+  method: "air_grantPermissions",
+  params: [policies] // ActionPolicyInfo[]
+});
+// Returns: { compressedSessionData: string, sessionOwnerPrivateKey: string, permissionIds: Hex[] }
+air_revokePermission
+
+
+const txHash = await provider.request({
+  method: "air_revokePermission",
+  params: [permissionId] // Hex
+});
+// Returns: string (transaction hash)
+air_executeAction
+
+
+const txHash = await provider.request({
+  method: 'air_executeAction',
+  params: [{
+    compressedSessionData: string,
+    sessionOwnerPrivateKey: string,
+    call: {
+      data?: Hex,
+      to: Address,
+      value?: bigint
+    }
+  }]
+});
+// Returns: string (transaction hash)
+
+Advanced Functions (Beta)
+AIR Kit extends the standard EIP-1193 provider with custom RPC methods for advanced functionality.
+
+Note
+
+Swap functionality, advanced DeFi operations are only supported on Base chain only.
+
+Swap Operations (Beta)
+air_getSwapQuote
+
+
+const quote = await provider.request({
+  method: "air_getSwapQuote",
+  params: [
+    {
+      fromToken: string,
+      toToken: string,
+      fromAmount: string
+    }
+  ]
+});
+// Returns: swap quote data
+air_sendSwapTransaction
+
+
+const txHash = await provider.request({
+  method: "air_sendSwapTransaction",
+  params: [
+    {
+      fromToken: string,
+      toToken: string,
+      fromAmount: string
+    }
+  ]
+});
+// Returns: string (transaction hash)
+air_showSwapUI
+
+
+const txHash = await provider.request({
+  method: "air_showSwapUI",
+  params: []
+});
+// Returns: string (transaction hash)
+
+What is a Credential Schema?
+A credential schema is a blueprint that defines the structure, data types, and validation rules for the credentials you want to issue. Think of it as a template that ensures all credentials of a particular type have consistent fields and data formats.
+
+Schemas serve several critical purposes:
+
+Data Consistency: Ensures all credentials of the same type have identical field structures
+Validation: Defines data types and constraints for each field
+Interoperability: Allows different systems to understand and process your credentials
+Privacy: Enables selective disclosure of specific fields within a credential
+Schema Components
+A Schema Type encodes the structure of a particular Verifiable Credential (VC) by defining the type, the fields that must be included inside the VC, and a description for these fields.
+
+Schemas are a crucial component that allows for the interoperable use of VCs across different services. Just by parsing a schema, any program can interpret the content of a Verifiable Credential without having to interact with the Issuer Party.
+
+A schema type is made of two separate documents:
+
+1. JSON-LD Context
+The JSON-LD Context contains a description of the type and its fields, providing semantic meaning to your credential data by linking it to standardized vocabularies and ontologies.
+
+Understanding JSON-LD Context
+JSON-LD context defines the vocabulary and data types used in your credentials. It maps local field names to globally unique identifiers (URIs) that have well-defined meanings.
+
+Here's an example of a JSON-LD Context for a MembershipPointsCredential:
+
+
+{
+  "@context": [
+    {
+      "@version": 1.1,
+      "@protected": true,
+      "id": "@id",
+      "type": "@type",
+      "MembershipPointsCredential": {
+        "@id": "https://your-domain.com/schemas/membership-points.json-ld#MembershipPointsCredential",
+        "@context": {
+          "@version": 1.1,
+          "@protected": true,
+          "id": "@id",
+          "type": "@type",
+          "vocab": "https://your-domain.com/vocab/membership-points#",
+          "xsd": "http://www.w3.org/2001/XMLSchema#",
+          "memberId": {
+            "@id": "vocab:memberId",
+            "@type": "xsd:string"
+          },
+          "totalPoints": {
+            "@id": "vocab:totalPoints",
+            "@type": "xsd:integer"
+          },
+          "tier": {
+            "@id": "vocab:tier",
+            "@type": "xsd:string"
+          },
+          "lastUpdated": {
+            "@id": "vocab:lastUpdated",
+            "@type": "xsd:dateTime"
+          }
+        }
+      }
+    }
+  ]
+}
+Key JSON-LD Context Elements
+@version: Specifies the JSON-LD version (typically 1.1)
+@protected: Ensures that terms cannot be overridden
+@id: Maps to globally unique identifiers
+@type: Specifies the data type using XML Schema types
+vocab: Custom vocabulary namespace for your specific fields
+xsd: XML Schema Definition namespace for standard data types
+2. JSON Schema
+The JSON Schema contains the validation rules for the Issuer Node, defining the structure and constraints for the credential data.
+
+Here's an example of a JSON Schema for the MembershipPointsCredential:
+
+
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "$metadata": {
+    "uris": {
+      "jsonLdContext": "https://your-domain.com/schemas/membership-points.json-ld",
+      "jsonSchema": "https://your-domain.com/schemas/membership-points.json"
+    }
+  },
+  "required": [
+    "@context",
+    "id",
+    "type",
+    "issuanceDate",
+    "credentialSubject",
+    "credentialSchema",
+    "credentialStatus",
+    "issuer"
+  ],
+  "properties": {
+    "@context": {
+      "type": ["string", "array", "object"]
+    },
+    "id": {
+      "type": "string"
+    },
+    "type": {
+      "type": ["string", "array"],
+      "items": {
+        "type": "string"
+      }
+    },
+    "issuer": {
+      "type": ["string", "object"],
+      "format": "uri",
+      "required": ["id"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "issuanceDate": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expirationDate": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "credentialSchema": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uri"
+        },
+        "type": {
+          "type": "string"
+        }
+      }
+    },
+    "credentialSubject": {
+      "type": "object",
+      "required": ["id", "memberId", "totalPoints", "tier"],
+      "properties": {
+        "id": {
+          "title": "Credential Subject ID",
+          "type": "string",
+          "format": "uri"
+        },
+        "memberId": {
+          "title": "Member ID",
+          "type": "string",
+          "description": "Unique member identifier"
+        },
+        "totalPoints": {
+          "title": "Total Points",
+          "type": "integer",
+          "description": "Total accumulated membership points",
+          "minimum": 0
+        },
+        "tier": {
+          "title": "Membership Tier",
+          "type": "string",
+          "description": "Current membership tier based on points",
+          "enum": ["bronze", "silver", "gold", "platinum"]
+        },
+        "lastUpdated": {
+          "title": "Last Updated",
+          "type": "string",
+          "format": "date-time",
+          "description": "When points were last updated"
+        }
+      }
+    }
+  }
+}
+Key JSON Schema Elements
+$metadata: Contains URIs linking to both the JSON-LD context and JSON schema
+required: Lists all mandatory fields for the credential
+properties: Defines the structure and validation rules for each field
+credentialSubject: Contains the actual credential data fields
+format: Specifies validation formats (uri, date-time, etc.)
+Benefits of This Two-Document Approach
+Separation of Concerns: JSON-LD handles semantics, JSON Schema handles validation
+Interoperability: Different systems can understand credentials using standard vocabularies
+Validation: Issuer nodes can validate credential structure before issuance
+Flexibility: Allows for complex validation rules while maintaining semantic clarity
+
+
+Common Schema Use Cases
+Here are some popular schema types you might create:
+
+Membership Points Schema
+A comprehensive example showing how to create a schema for tracking membership points and tiers.
+
+JSON-LD Context
+
+{
+  "@context": [
+    {
+      "@version": 1.1,
+      "@protected": true,
+      "id": "@id",
+      "type": "@type",
+      "MembershipPointsCredential": {
+        "@id": "https://your-domain.com/schemas/membership-points.json-ld#MembershipPointsCredential",
+        "@context": {
+          "@version": 1.1,
+          "@protected": true,
+          "id": "@id",
+          "type": "@type",
+          "vocab": "https://your-domain.com/vocab/membership-points#",
+          "xsd": "http://www.w3.org/2001/XMLSchema#",
+          "memberId": {
+            "@id": "vocab:memberId",
+            "@type": "xsd:string"
+          },
+          "totalPoints": {
+            "@id": "vocab:totalPoints",
+            "@type": "xsd:integer"
+          },
+          "tier": {
+            "@id": "vocab:tier",
+            "@type": "xsd:string"
+          },
+          "lastUpdated": {
+            "@id": "vocab:lastUpdated",
+            "@type": "xsd:dateTime"
+          }
+        }
+      }
+    }
+  ]
+}
+JSON Schema
+
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "$metadata": {
+    "uris": {
+      "jsonLdContext": "https://your-domain.com/schemas/membership-points.json-ld",
+      "jsonSchema": "https://your-domain.com/schemas/membership-points.json"
+    }
+  },
+  "required": [
+    "@context",
+    "id",
+    "type",
+    "issuanceDate",
+    "credentialSubject",
+    "credentialSchema",
+    "credentialStatus",
+    "issuer"
+  ],
+  "properties": {
+    "@context": {
+      "type": ["string", "array", "object"]
+    },
+    "id": {
+      "type": "string"
+    },
+    "type": {
+      "type": ["string", "array"],
+      "items": {
+        "type": "string"
+      }
+    },
+    "issuer": {
+      "type": ["string", "object"],
+      "format": "uri",
+      "required": ["id"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "issuanceDate": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expirationDate": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "credentialSchema": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uri"
+        },
+        "type": {
+          "type": "string"
+        }
+      }
+    },
+    "credentialSubject": {
+      "type": "object",
+      "required": ["id", "memberId", "totalPoints", "tier"],
+      "properties": {
+        "id": {
+          "title": "Credential Subject ID",
+          "type": "string",
+          "format": "uri"
+        },
+        "memberId": {
+          "title": "Member ID",
+          "type": "string",
+          "description": "Unique member identifier"
+        },
+        "totalPoints": {
+          "title": "Total Points",
+          "type": "integer",
+          "description": "Total accumulated membership points",
+          "minimum": 0
+        },
+        "tier": {
+          "title": "Membership Tier",
+          "type": "string",
+          "description": "Current membership tier based on points",
+          "enum": ["bronze", "silver", "gold", "platinum"]
+        },
+        "lastUpdated": {
+          "title": "Last Updated",
+          "type": "string",
+          "format": "date-time",
+          "description": "When points were last updated"
+        }
+      }
+    }
+  }
+}
+Age Verification Schema
+JSON-LD Context
+
+{
+  "@context": [
+    {
+      "@version": 1.1,
+      "@protected": true,
+      "id": "@id",
+      "type": "@type",
+      "AgeVerificationCredential": {
+        "@id": "https://your-domain.com/schemas/age-verification.json-ld#AgeVerificationCredential",
+        "@context": {
+          "@version": 1.1,
+          "@protected": true,
+          "id": "@id",
+          "type": "@type",
+          "vocab": "https://your-domain.com/vocab/age-verification#",
+          "xsd": "http://www.w3.org/2001/XMLSchema#",
+          "age": {
+            "@id": "vocab:age",
+            "@type": "xsd:integer"
+          },
+          "dateOfBirth": {
+            "@id": "vocab:dateOfBirth",
+            "@type": "xsd:date"
+          },
+          "jurisdiction": {
+            "@id": "vocab:jurisdiction",
+            "@type": "xsd:string"
+          }
+        }
+      }
+    }
+  ]
+}
+JSON Schema
+
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "$metadata": {
+    "uris": {
+      "jsonLdContext": "https://your-domain.com/schemas/age-verification.json-ld",
+      "jsonSchema": "https://your-domain.com/schemas/age-verification.json"
+    }
+  },
+  "required": [
+    "@context",
+    "id",
+    "type",
+    "issuanceDate",
+    "credentialSubject",
+    "credentialSchema",
+    "credentialStatus",
+    "issuer"
+  ],
+  "properties": {
+    "@context": {
+      "type": ["string", "array", "object"]
+    },
+    "id": {
+      "type": "string"
+    },
+    "type": {
+      "type": ["string", "array"],
+      "items": {
+        "type": "string"
+      }
+    },
+    "issuer": {
+      "type": ["string", "object"],
+      "format": "uri",
+      "required": ["id"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "issuanceDate": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expirationDate": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "credentialSchema": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uri"
+        },
+        "type": {
+          "type": "string"
+        }
+      }
+    },
+    "credentialSubject": {
+      "type": "object",
+      "required": ["id", "age", "dateOfBirth", "jurisdiction"],
+      "properties": {
+        "id": {
+          "title": "Credential Subject ID",
+          "type": "string",
+          "format": "uri"
+        },
+        "age": {
+          "title": "Age",
+          "type": "integer",
+          "description": "User's age in years",
+          "minimum": 0,
+          "maximum": 150
+        },
+        "dateOfBirth": {
+          "title": "Date of Birth",
+          "type": "string",
+          "format": "date",
+          "description": "User's date of birth"
+        },
+        "jurisdiction": {
+          "title": "Jurisdiction",
+          "type": "string",
+          "description": "Legal jurisdiction for age verification"
+        }
+      }
+    }
+  }
+}
+Event Pass Schema
+JSON-LD Context
+
+{
+  "@context": [
+    {
+      "@version": 1.1,
+      "@protected": true,
+      "id": "@id",
+      "type": "@type",
+      "EventPassCredential": {
+        "@id": "https://your-domain.com/schemas/event-pass.json-ld#EventPassCredential",
+        "@context": {
+          "@version": 1.1,
+          "@protected": true,
+          "id": "@id",
+          "type": "@type",
+          "vocab": "https://your-domain.com/vocab/event-pass#",
+          "xsd": "http://www.w3.org/2001/XMLSchema#",
+          "eventName": {
+            "@id": "vocab:eventName",
+            "@type": "xsd:string"
+          },
+          "eventDate": {
+            "@id": "vocab:eventDate",
+            "@type": "xsd:dateTime"
+          },
+          "ticketType": {
+            "@id": "vocab:ticketType",
+            "@type": "xsd:string"
+          },
+          "seatNumber": {
+            "@id": "vocab:seatNumber",
+            "@type": "xsd:string"
+          }
+        }
+      }
+    }
+  ]
+}
+JSON Schema
+
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "$metadata": {
+    "uris": {
+      "jsonLdContext": "https://your-domain.com/schemas/event-pass.json-ld",
+      "jsonSchema": "https://your-domain.com/schemas/event-pass.json"
+    }
+  },
+  "required": [
+    "@context",
+    "id",
+    "type",
+    "issuanceDate",
+    "credentialSubject",
+    "credentialSchema",
+    "credentialStatus",
+    "issuer"
+  ],
+  "properties": {
+    "@context": {
+      "type": ["string", "array", "object"]
+    },
+    "id": {
+      "type": "string"
+    },
+    "type": {
+      "type": ["string", "array"],
+      "items": {
+        "type": "string"
+      }
+    },
+    "issuer": {
+      "type": ["string", "object"],
+      "format": "uri",
+      "required": ["id"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "issuanceDate": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expirationDate": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "credentialSchema": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uri"
+        },
+        "type": {
+          "type": "string"
+        }
+      }
+    },
+    "credentialSubject": {
+      "type": "object",
+      "required": ["id", "eventName", "eventDate", "ticketType"],
+      "properties": {
+        "id": {
+          "title": "Credential Subject ID",
+          "type": "string",
+          "format": "uri"
+        },
+        "eventName": {
+          "title": "Event Name",
+          "type": "string",
+          "description": "Name of the event"
+        },
+        "eventDate": {
+          "title": "Event Date",
+          "type": "string",
+          "format": "date-time",
+          "description": "Date and time of the event"
+        },
+        "ticketType": {
+          "title": "Ticket Type",
+          "type": "string",
+          "description": "Type of ticket",
+          "enum": ["general", "vip", "backstage", "premium"]
+        },
+        "seatNumber": {
+          "title": "Seat Number",
+          "type": "string",
+          "description": "Seat or section number"
+        }
+      }
+    }
+  }
+}
+Professional Credential Schema
+JSON-LD Context
+
+{
+  "@context": [
+    {
+      "@version": 1.1,
+      "@protected": true,
+      "id": "@id",
+      "type": "@type",
+      "ProfessionalCredential": {
+        "@id": "https://your-domain.com/schemas/professional-credential.json-ld#ProfessionalCredential",
+        "@context": {
+          "@version": 1.1,
+          "@protected": true,
+          "id": "@id",
+          "type": "@type",
+          "vocab": "https://your-domain.com/vocab/professional-credential#",
+          "xsd": "http://www.w3.org/2001/XMLSchema#",
+          "certificationName": {
+            "@id": "vocab:certificationName",
+            "@type": "xsd:string"
+          },
+          "issuingOrganization": {
+            "@id": "vocab:issuingOrganization",
+            "@type": "xsd:string"
+          },
+          "certificationNumber": {
+            "@id": "vocab:certificationNumber",
+            "@type": "xsd:string"
+          },
+          "issueDate": {
+            "@id": "vocab:issueDate",
+            "@type": "xsd:date"
+          },
+          "expiryDate": {
+            "@id": "vocab:expiryDate",
+            "@type": "xsd:date"
+          },
+          "credentialLevel": {
+            "@id": "vocab:credentialLevel",
+            "@type": "xsd:string"
+          }
+        }
+      }
+    }
+  ]
+}
+JSON Schema
+
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "$metadata": {
+    "uris": {
+      "jsonLdContext": "https://your-domain.com/schemas/professional-credential.json-ld",
+      "jsonSchema": "https://your-domain.com/schemas/professional-credential.json"
+    }
+  },
+  "required": [
+    "@context",
+    "id",
+    "type",
+    "issuanceDate",
+    "credentialSubject",
+    "credentialSchema",
+    "credentialStatus",
+    "issuer"
+  ],
+  "properties": {
+    "@context": {
+      "type": ["string", "array", "object"]
+    },
+    "id": {
+      "type": "string"
+    },
+    "type": {
+      "type": ["string", "array"],
+      "items": {
+        "type": "string"
+      }
+    },
+    "issuer": {
+      "type": ["string", "object"],
+      "format": "uri",
+      "required": ["id"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "issuanceDate": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expirationDate": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "credentialSchema": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uri"
+        },
+        "type": {
+          "type": "string"
+        }
+      }
+    },
+    "credentialSubject": {
+      "type": "object",
+      "required": [
+        "id",
+        "certificationName",
+        "issuingOrganization",
+        "certificationNumber",
+        "issueDate"
+      ],
+      "properties": {
+        "id": {
+          "title": "Credential Subject ID",
+          "type": "string",
+          "format": "uri"
+        },
+        "certificationName": {
+          "title": "Certification Name",
+          "type": "string",
+          "description": "Name of the certification"
+        },
+        "issuingOrganization": {
+          "title": "Issuing Organization",
+          "type": "string",
+          "description": "Organization that issued the certification"
+        },
+        "certificationNumber": {
+          "title": "Certification Number",
+          "type": "string",
+          "description": "Unique certification identifier"
+        },
+        "issueDate": {
+          "title": "Issue Date",
+          "type": "string",
+          "format": "date",
+          "description": "Date the certification was issued"
+        },
+        "expiryDate": {
+          "title": "Expiry Date",
+          "type": "string",
+          "format": "date",
+          "description": "Date the certification expires"
+        },
+        "credentialLevel": {
+          "title": "Credential Level",
+          "type": "string",
+          "description": "Level of certification",
+          "enum": ["associate", "professional", "expert", "master"]
+        }
+      }
+    }
+  }
+}
+
+
+Schema Management and Versioning
+As your application evolves, you may need to update your credential schemas. Understanding how to manage schema changes is crucial for maintaining compatibility and ensuring smooth operations.
+
+Schema Versioning Strategy
+When you need to modify a schema, consider these approaches:
+
+Backward Compatible Changes
+These changes don't break existing credentials:
+
+Adding new optional attributes
+Updating descriptions or metadata
+Adding new schema versions
+Breaking Changes
+These changes require careful planning:
+
+Removing attributes
+Changing attribute data types
+Making optional attributes required
+Renaming attributes
+Best Practices for Schema Evolution
+1. Plan for Growth
+JSON-LD Context v1.0:
+
+
+{
+  "@context": [
+    {
+      "@version": 1.1,
+      "@protected": true,
+      "id": "@id",
+      "type": "@type",
+      "UserProfileCredential": {
+        "@id": "https://your-domain.com/schemas/user-profile-v1.0.json-ld#UserProfileCredential",
+        "@context": {
+          "@version": 1.1,
+          "@protected": true,
+          "id": "@id",
+          "type": "@type",
+          "vocab": "https://your-domain.com/vocab/user-profile/v1.0#",
+          "xsd": "http://www.w3.org/2001/XMLSchema#",
+          "firstName": {
+            "@id": "vocab:firstName",
+            "@type": "xsd:string"
+          },
+          "lastName": {
+            "@id": "vocab:lastName",
+            "@type": "xsd:string"
+          },
+          "email": {
+            "@id": "vocab:email",
+            "@type": "xsd:string"
+          }
+        }
+      }
+    }
+  ]
+}
+2. Add New Fields Gradually
+JSON-LD Context v1.1:
+
+
+{
+  "@context": [
+    {
+      "@version": 1.1,
+      "@protected": true,
+      "id": "@id",
+      "type": "@type",
+      "UserProfileCredential": {
+        "@id": "https://your-domain.com/schemas/user-profile-v1.1.json-ld#UserProfileCredential",
+        "@context": {
+          "@version": 1.1,
+          "@protected": true,
+          "id": "@id",
+          "type": "@type",
+          "vocab": "https://your-domain.com/vocab/user-profile/v1.1#",
+          "xsd": "http://www.w3.org/2001/XMLSchema#",
+          "firstName": {
+            "@id": "vocab:firstName",
+            "@type": "xsd:string"
+          },
+          "lastName": {
+            "@id": "vocab:lastName",
+            "@type": "xsd:string"
+          },
+          "email": {
+            "@id": "vocab:email",
+            "@type": "xsd:string"
+          },
+          "phoneNumber": {
+            "@id": "vocab:phoneNumber",
+            "@type": "xsd:string"
+          }
+        }
+      }
+    }
+  ]
+}
+3. Deprecate Fields Carefully
+JSON-LD Context v2.0:
+
+
+{
+  "@context": [
+    {
+      "@version": 1.1,
+      "@protected": true,
+      "id": "@id",
+      "type": "@type",
+      "UserProfileCredential": {
+        "@id": "https://your-domain.com/schemas/user-profile-v2.0.json-ld#UserProfileCredential",
+        "@context": {
+          "@version": 1.1,
+          "@protected": true,
+          "id": "@id",
+          "type": "@type",
+          "vocab": "https://your-domain.com/vocab/user-profile/v2.0#",
+          "xsd": "http://www.w3.org/2001/XMLSchema#",
+          "firstName": {
+            "@id": "vocab:firstName",
+            "@type": "xsd:string"
+          },
+          "lastName": {
+            "@id": "vocab:lastName",
+            "@type": "xsd:string"
+          },
+          "email": {
+            "@id": "vocab:email",
+            "@type": "xsd:string"
+          },
+          "phoneNumber": {
+            "@id": "vocab:phoneNumber",
+            "@type": "xsd:string"
+          },
+          "fullName": {
+            "@id": "vocab:fullName",
+            "@type": "xsd:string"
+          }
+        }
+      }
+    }
+  ]
+}
+Managing Schema Updates in Production
+1. Gradual Migration Strategy
+Keep old schemas active during transition periods
+Issue new credentials with updated schemas
+Gradually phase out old schema versions
+Monitor credential usage patterns
+2. Communication with Users
+Notify users about schema changes
+Provide migration guides for credential holders
+Maintain backward compatibility for verification
+3. Testing Schema Changes
+Test new schemas in development environment
+Validate credential issuance with new schemas
+Ensure verification still works with old credentials
+Test selective disclosure with updated schemas
+Schema Registry and Discovery
+The AIR Kit provides a schema registry where you can:
+
+Browse Available Schemas: Discover schemas created by other developers
+Reuse Existing Schemas: Use well-established schemas for common use cases
+Contribute Schemas: Share your schemas with the community
+Next Steps
+Now that you understand schema creation and JSON-LD implementation, you can:
+
+Issue Credentials - Use your schemas to issue credentials in the Credential Issuance Quickstart
+Verify Credentials - Learn how to verify credentials in the Credential Verification Quickstart
+Explore Schema Registry - Browse and reuse existing schemas in the Developer Dashboard
+Advanced Schema Design - Learn about complex schema patterns and advanced use cases
+
+
+
+Verifying Credentials
+The Verifier is a key entity within the AIR Credential ecosystem, responsible for verifying the authenticity of a user’s credential and determining whether it meets predefined conditions. Leveraging zero-knowledge proofs, the Verifier can validate credentials without accessing or exposing sensitive user data.
+
+As a Verifier, your role is to verify the authenticity of user credentials and ensure they meet the required conditions. Follow these steps to integrate and operate the verification process.
+
+Verification Flow
+The AIR Credential verification process follows these simplified steps:
+
+Verification Request - Verifier presents a verification requirement to the user (e.g., "Prove you're over 18")
+Credential Issuance (if needed) - If the user lacks the required credential, a trusted Issuer validates their information and issues an encrypted verifiable credential stored in decentralized storage
+Zero-Knowledge Proof Generation - User generates a cryptographic proof from their credential that answers the verifier's query without revealing personal data
+On-Chain Verification - The proof is submitted to Moca Chain's smart contract, which validates it and records the verification result
+Access Granted - Upon successful verification, the user gains access to the requested service or resource
+Decentralized Storage
+Moca Chain
+Issuer
+User
+Verifier
+Decentralized Storage
+Moca Chain
+Issuer
+User
+Verifier
+alt
+[Credential not held]
+1. Verification Request ("Prove you're over 18")
+2a. Provides information
+2b. Issues encrypted credential
+2c. Credential issued
+3a. Download encrypted credential
+3a. Decrypt credential data
+3b. Generates zero-knowledge proof
+4. Submits proof for verification
+4. Proof validation result
+5. Access granted
+Implementation
+Step 1: Set Up a Verification Program
+Use the Developer Dashboard to create a verification program (Verifier -> Program).
+While creating the program, search for the schema for the credentials you intend to verify, and check the attributes to be included (e.g., name, age, nationality, etc.).
+Use the Define Query module to set up specific verification conditions, such as:
+Attributes to verify (e.g., age, nationality).
+Operators (e.g., Equals, Not Equals, Includes, Excludes).
+Attribute values to match.
+Specify the Issuer’s DID to ensure the credentials being verified originate from a trusted issuer. (optional)
+Provide a program name and review all configured details before saving.
+Publish the program on-chain and take note of the program ID. You will need $MOCA in your Fee Wallet (Verifier -> Fee Wallet).
+Step 2: Generate Auth Token
+Generate a Partner JWT securely with your backend server, and include scope=verify to limit its scope.
+
+Step 3: Initiate Verification Request
+To verify a user's Verified Credentials, simply call the verifyCredentials() function in AIR Kit to verify a VC on-chain.
+
+WebFlutter
+
+public async verifyCredential({
+    authToken,
+    programId,
+    redirectUrl,
+  }: {
+    authToken: string;
+    programId: string;
+    redirectUrl?: string;
+  }): Promise<CredentialVerificationResult>
+Input Parameters
+Name	Type	Required	Description
+authToken	string	Yes	Your signed Partner JWT, with scope=verify.
+programId	string	Yes	Identifier for the verification program.
+redirectUrl	string	No	Optional URL to redirect the user if the user has not issued the relevant credential.
+Response
+The function returns a Promise<CredentialVerificationResult>. The CredentialVerificationResult includes a status field, which can have one of the following values:
+
+Field	Type	Description
+status	string	The result of the credential verification. Possible values:
+- "Compliant": Credential is valid and meets all verification requirements.
+- "Non-Compliant": Credential is valid but does not meet requirements.
+- "Pending": Verification is in progress or awaiting user action.
+- "Revoking": Credential is in the process of being revoked.
+- "Revoked": Credential has been revoked and is no longer valid.
+- "Expired": Credential is no longer valid due to expiration.
+- "NotFound": Credential could not be found or do not exist.
+Under the hood, AIR Kit retrieves the encrypted credentials from Decentralized Storage based on the user’s wallet address and program configuration. After the user approves the verification process, a Zero-knowledge Proof (ZKP) is generated on the client side without exposing the raw data to the verifier or Moca's servers. At the same time, the credentials are checked against any revocation statuses or expiration. Once the ZKP is generated, it is submitted on-chain for verification.
+
+
+**Schema Creation Guide**
+Credential schemas are the foundation of your credential issuance system. This guide will help you understand, create, and manage schemas effectively for your AIR Kit applications.
+**Creating Schemas with the Schema Builder**
+The AIR Kit Schema Builder provides an intuitive interface for creating credential schemas without requiring technical knowledge of JSON schema structures.
+**Step 1: Access the Schema Builder**
+1. Go to the **Developer Dashboard**
+2. Navigate to the **Schemas** section under **Issuer**
+**Step 2: Create a New Schema**
+1. Click **"Create New Schema"**
+2. Fill in the basic schema information:
+   * **Title**: Choose a descriptive name for your schema
+   * **Type**: Select or enter a category for your credential type
+   * **Description**: Provide a clear explanation of what this schema represents
+**Step 3: Define Attributes**
+1. Click **"+"** to add attributes
+2. For each attribute, specify:
+   * **Name**: Field identifier (use camelCase)
+   * **Type**: Choose from String, Number, Boolean, or Date
+   * **Description**: Explain what this field represents
+   * **Required**: Mark if the field is mandatory
+**Step 4: Publish Your Schema**
+1. Review your schema structure
+2. Click **"Publish"** to make it available for credential creation
+3. Note the schema ID for use in your applications
+**Schema Builder Best Practices**
+**1. Choose Descriptive Names**
+* Use clear, descriptive names for your schema title and attributes
+* Avoid abbreviations that might be unclear to other developers
+* Example: `"memberId"` instead of `"mem_id"`
+**2. Provide Clear Descriptions**
+* Write detailed descriptions for each attribute
+* Explain the purpose and expected format of each field
+* Include any validation rules or constraints
+**3. Use Appropriate Data Types**
+* **String**: For text data, IDs, names, descriptions
+* **Number**: For numeric values, ages, quantities, scores
+* **Boolean**: For true/false values, flags, status indicators
+* **Date**: For timestamps, expiry dates, event dates
+**4. Consider Privacy Requirements**
+* Only include fields that are necessary for your use case
+* Remember that users can selectively disclose fields
+* Avoid collecting sensitive data unless absolutely required
+**5. Plan for Future Updates**
+* Consider how your schema might evolve over time
+* Use versioning to manage schema changes
+* Design attributes to be extensible**Issuing Credentials**
+The issuer is the entity responsible for creating and issuing credentials within the AIR Credential ecosystem. It defines schemas, issues Verifiable Credentials, and manages the lifecycle of credentials.
+As an Issuer, you are responsible for issuing **Verifiable Credentials** to users. Follow these steps to integrate and manage the credential issuance process.
+**Step 1: Set Up an Issuance Program**
+   1. Use the **Developer Dashboard** to create an issuance program (Issuer -> Programs).
+   2. While creating the program, search for the schema for the credentials you intend to issue, and check the attributes to be included (e.g., name, age, nationality, etc.). It is highly recommended to search for an existing schema so that credentials are interoperable across platforms and can be recognized, displayed, or verified by any verifier. If there are no suitable schemas available, please contact us, or you may create your own schema.
+   3. Publish the program and take note of the program ID.
+**Step 2: Collect User Data**
+Securely authenticate and retrieve your user's data within your existing application.
+**Step 3: Generate Auth Token**
+Generate a **Partner JWT** securely with your backend server, and include `scope=issue` to limit its scope.
+**Step 4: Issue Credentials**
+To encrypt the user's data and create a verified credential on-chain, simply call the issueCredential() function in AIR Kit.
+**WebFlutter**
+
+```
+public async issueCredential({
+    authToken,
+    issuerDid,
+    credentialId,
+    credentialSubject,
+}: {
+    authToken: string;
+    issuerDid: string;
+    credentialId: string;
+    credentialSubject: Record<string, unknown>;
+}): Promise<void>
+```
+
+**ParameterTypeDescription**`authTokenstring`Your signed Partner JWT, with scope=issue.`issuerDidstring`Your Issuer DID.`credentialIdstring`Program ID for the credential being issued.`credentialSubjectRecord<string, unknown>`Object containing the credential's claims and attributes for the subject.
+**Response:** Throws an error if issuance fails.
+Under the hood, AIR Kit generates a Verifiable Credential based on the issuance program and schema, pushes the VC on-chain, and stores the encrypted data in decentralized storage. During this process, the raw user data and private keys stay on the client side and are not exposed to Moca's servers.
+**Tips**
+   * Use the **Developer Dashboard** to view and manage issued credentials (Issuer -> Records). In cases where credentials need to be invalidated, use the **Revoke** function in the Dashboard.
+   * Use the **Chain Explorer** to find the record of the on-chain transaction related to issuance (Credentials -> Issuance)
+**Best Practices for Issuers**
+   * Only issue credentials after thorough validation of submitted evidence or claims.
+   * Minimize inclusion of personally identifiable information—issue privacy-preserving credentials whenever possible.
+   * Adopt open, standardized schemas to maximize compatibility and reduce verification friction across apps.
+   * Implement robust expiry and revocation processes, and ensure that holders and verifiers are informed of credential status.
+   * Respect user sovereignty at all stages; credentials should be under full user control and portable across the ecosystem.
