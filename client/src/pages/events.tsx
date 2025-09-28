@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useMocaKit } from "@/hooks/useMocaKit";
 import { getTicketCredentialConfig } from "@/config/environment";
+import Navigation from "@/components/Navigation";
 import { Calendar, MapPin, Music, Users, DollarSign, Search, Filter } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
@@ -331,16 +332,21 @@ export default function Events() {
 
   if (error) {
     return (
-      <div className="container mx-auto py-8 px-4">
-        <div className="text-center">
-          <p className="text-destructive">Failed to load events. Please try again later.</p>
+      <div className="min-h-screen">
+        <Navigation />
+        <div className="container mx-auto py-8 px-4">
+          <div className="text-center">
+            <p className="text-destructive">Failed to load events. Please try again later.</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="min-h-screen">
+      <Navigation />
+      <div className="container mx-auto py-8 px-4">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Discover Events</h1>
         <p className="text-muted-foreground">
@@ -458,6 +464,7 @@ export default function Events() {
           </div>
         </>
       )}
+      </div>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import Navigation from "@/components/Navigation";
 import { Calendar, MapPin, Music, Users, DollarSign, Image } from "lucide-react";
 
 const createEventSchema = z.object({
@@ -97,7 +98,9 @@ export default function CreateEvent() {
   };
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-2xl">
+    <div className="min-h-screen">
+      <Navigation />
+      <div className="container mx-auto py-8 px-4 max-w-2xl">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Create New Event</h1>
         <p className="text-muted-foreground">
@@ -318,6 +321,7 @@ export default function CreateEvent() {
           </Form>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
