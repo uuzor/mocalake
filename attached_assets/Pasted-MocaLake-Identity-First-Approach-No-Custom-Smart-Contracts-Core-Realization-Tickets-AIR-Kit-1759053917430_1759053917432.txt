@@ -1,0 +1,302 @@
+MocaLake - Identity-First Approach (No Custom Smart Contracts):
+Core Realization:
+
+Tickets = AIR Kit Credentials (not NFTs)
+Anti-scalping = Identity verification (not contract logic)
+Fan verification = AIR Kit schemas (not custom tokens)
+
+How It Actually Works:
+1. Event Tickets as Verifiable Credentials
+javascript// Event organizer issues ticket credentials
+const ticketCredential = await airService.issueCredential({
+  authToken: organizerJWT,
+  issuerDid: organizerDID,
+  credentialId: "event_ticket_program",
+  credentialSubject: {
+    eventName: "Taylor Swift Concert",
+    eventDate: "2024-12-01",
+    ticketType: "VIP",
+    seatSection: "A1",
+    purchasePrice: "150",
+    originalBuyer: userDID,
+    transferable: false // Anti-scalping built-in
+  }
+});
+2. Fan Status as Credentials
+javascript// Fans earn verifiable credentials over time
+const fanCredential = await airService.issueCredential({
+  credentialSubject: {
+    artistName: "Taylor Swift",
+    attendanceCount: 5,
+    memberSince: "2020",
+    spendingTier: "superfan",
+    verified: true
+  }
+});
+3. Entry Verification (Zero Smart Contracts)
+javascript// At venue entrance
+const entryVerification = await airService.verifyCredential({
+  authToken: venueJWT,
+  programId: "event_entry_program"
+});
+
+if (entryVerification.status === "Compliant") {
+  // Allow entry - person has valid ticket credential
+}
+Anti-Scalping Through Identity:
+
+Tickets are non-transferable credentials linked to identity
+Resales require identity verification and price caps
+ZK proofs let you prove ticket ownership without revealing personal data
+
+Why This Approach Wins:
+
+No gas fees for users (AIR Kit sponsored)
+No complex contracts to audit or deploy
+Privacy-preserving through ZK proofs
+Cross-platform - credentials work everywhere
+Focuses on the hackathon theme: identity infrastructure
+
+The smart contract I wrote completely defeats the purpose. MocaLake should be a pure identity play leveraging AIR Kit's infrastructure, not recreating traditional NFT marketplaces.
+Want me to redesign this as a credential-based system using only AIR Kit?RetryEVnow which schema are we going to create, check the chaina again for referenceEditLooking back at the conversation and the schema examples in the AIR Kit documentation, I can see we need to create schemas that align with MocaLake's fan verification and ticketing system.
+Based on the provided examples (Membership Points, Age Verification, Event Pass, Professional Credential), here are the two core schemas MocaLake needs:
+1. Fan Verification Credential Schema
+Purpose: Prove fan status and tier without revealing personal data
+json{
+  "credentialSubject": {
+    "fanId": "string",
+    "artistName": "string", 
+    "fanTier": "enum: [casual, verified, superfan, vip]",
+    "attendanceCount": "integer",
+    "memberSince": "date",
+    "totalSpent": "string", // In ranges like "$100-500" for privacy
+    "verificationLevel": "enum: [basic, kyc_verified, premium]",
+    "lastActivity": "date"
+  }
+}
+2. Event Ticket Credential Schema
+Purpose: Non-transferable ticket that prevents scalping
+json{
+  "credentialSubject": {
+    "ticketId": "string",
+    "eventName": "string",
+    "artistName": "string",
+    "eventDate": "dateTime",
+    "venue": "string",
+    "ticketType": "enum: [general, vip, backstage, premium]",
+    "seatInfo": "string",
+    "purchasePrice": "string",
+    "originalBuyer": "string", // DID
+    "transferable": "boolean", // Always false for anti-scalping
+    "purchaseTimestamp": "dateTime",
+    "validUntil": "dateTime"
+  }
+}
+Key Design Decisions:
+Privacy-First:
+
+totalSpent uses ranges instead of exact amounts
+attendanceCount without revealing specific events
+Fan status provable via ZK without exposing purchase history
+
+Anti-Scalping Built-In:
+
+transferable: false in ticket credentials
+originalBuyer linked to identity
+Tickets expire after event
+
+Cross-Platform Reputation:
+
+Fan credentials work across all artists/venues
+Portable fan tier that travels with identity
+Attendance history builds over time
+
+These schemas leverage AIR Kit's existing patterns while solving the core problems: proving fan status privately and preventing ticket scalping through identity verification rather than complex smart contracts.
+The beauty is that event organizers become credential issuers and venues become credential verifiers - no custom contracts needed.RetryEVthere are 2 types of schema ld and json - A comprehensive example showing how to create a schema for tracking membership points and tiers.
+JSON-LD Context{
+  "@context": [
+    {
+      "@version": 1.1,
+      "@protected": true,
+      "id": "@id",
+      "type": "@type",
+      "MembershipPointsCredential": {
+        "@id": "https://your-domain.com/schemas/membership-points.json-ld#MembershipPointsCredential",
+        "@context": {
+          "@version": 1.1,
+          "@protected": true,
+          "id": "@id",
+          "type": "@type",
+          "vocab": "https://your-domain.com/vocab/membership-points#",
+          "xsd": "http://www.w3.org/2001/XMLSchema#",
+          "memberId": {
+            "@id": "vocab:memberId",
+            "@type": "xsd:string"
+          },
+          "totalPoints": {
+            "@id": "vocab:totalPoints",
+            "@type": "xsd:integer"
+          },
+          "tier": {
+            "@id": "vocab:tier",
+            "@type": "xsd:string"
+          },
+          "lastUpdated": {
+            "@id": "vocab:lastUpdated",
+            "@type": "xsd:dateTime"
+          }
+        }
+      }
+    }
+  ]
+}JSON Schema{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "$metadata": {
+    "uris": {
+      "jsonLdContext": "https://your-domain.com/schemas/membership-points.json-ld",
+      "jsonSchema": "https://your-domain.com/schemas/membership-points.json"
+    }
+  },
+  "required": [
+    "@context",
+    "id",
+    "type",
+    "issuanceDate",
+    "credentialSubject",
+    "credentialSchema",
+    "credentialStatus",
+    "issuer"
+  ],
+  "properties": {
+    "@context": {
+      "type": ["string", "array", "object"]
+    },
+    "id": {
+      "type": "string"
+    },
+    "type": {
+      "type": ["string", "array"],
+      "items": {
+        "type": "string"
+      }
+    },
+    "issuer": {
+      "type": ["string", "object"],
+      "format": "uri",
+      "required": ["id"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "issuanceDate": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expirationDate": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "credentialSchema": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uri"
+        },
+        "type": {
+          "type": "string"
+        }
+      }
+    },
+    "credentialSubject": {
+      "type": "object",
+      "required": ["id", "memberId", "totalPoints", "tier"],
+      "properties": {
+        "id": {
+          "title": "Credential Subject ID",
+          "type": "string",
+          "format": "uri"
+        },
+        "memberId": {
+          "title": "Member ID",
+          "type": "string",
+          "description": "Unique member identifier"
+        },
+        "totalPoints": {
+          "title": "Total Points",
+          "type": "integer",
+          "description": "Total accumulated membership points",
+          "minimum": 0
+        },
+        "tier": {
+          "title": "Membership Tier",
+          "type": "string",
+          "description": "Current membership tier based on points",
+          "enum": ["bronze", "silver", "gold", "platinum"]
+        },
+        "lastUpdated": {
+          "title": "Last Updated",
+          "type": "string",
+          "format": "date-time",
+          "description": "When points were last updated"
+        }
+      }
+    }
+  }
+}EditYou're absolutely right. I need to create both the JSON-LD Context and JSON Schema for each credential type. Let me create the complete schemas for MocaLake following the AIR Kit format:MocaLake Fan Verification Credential SchemaCode {
+  "fanCredentialJsonLD": {
+    "@context": [
+      {
+        "@version": 1.1,
+        "@protected": true,
+        "id": "@id",
+        "type": "@type",
+        "FanVerificationCredential": {
+          "@id": "https://mocalake.com/schemas/fan-verifiNow let me create the Event Ticket Credential Schema:MocaLake Event Ticket Credential SchemaCode {
+  "ticketCredentialJsonLD": {
+    "@context": [
+      {
+        "@version": 1.1,
+        "@protected": true,
+        "id": "@id",
+        "type": "@type",
+        "EventTicketCredential": {
+          "@id": "https://mocalake.com/schemas/event-tickePerfect! I've created both complete schemas for MocaLake following the AIR Kit format. Here's what we have:
+Schema 1: Fan Verification Credential
+Key Features:
+
+Privacy-preserving spending tiers ($0-100, $100-500, etc.) instead of exact amounts
+Reputation scoring (0-1000) for behavioral tracking
+Multiple verification levels (basic, KYC verified, premium)
+Cross-artist portability - fan status travels everywhere
+
+Schema 2: Event Ticket Credential
+Key Features:
+
+Anti-scalping by design - transferable: false by default
+Identity-linked via originalBuyer DID
+Price protection with maxResalePrice built-in
+Usage tracking with isUsed flag
+Automatic expiration via validUntil
+
+How These Work Together:
+Fan Journey:
+
+Get verified → Receive FanVerificationCredential
+Buy tickets → Receive EventTicketCredential (linked to fan identity)
+Attend events → Build reputation and attendance count
+Unlock perks → Higher tiers get early access, better prices
+
+Anti-Scalping Flow:
+
+Tickets are non-transferable credentials by default
+If resale allowed, price cap enforced via maxResalePrice
+Identity verification required for any transfer
+Reputation penalties for scalping attempts
+
+These schemas eliminate the need for complex smart contracts - everything is handled through AIR Kit's credential issuance and verification system. Event organizers become credential issuers, venues become verifiers, and fans build portable reputation across the entire ecosystem.
