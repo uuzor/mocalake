@@ -59,6 +59,8 @@ export class MemStorage implements IStorage {
     const user: User = { 
       ...insertUser, 
       id,
+      mocaId: insertUser.mocaId || null,
+      username: insertUser.username || null,
       reputationScore: 0,
       verifiedFan: false,
       createdAt: new Date()
@@ -90,6 +92,8 @@ export class MemStorage implements IStorage {
     const event: Event = {
       ...insertEvent,
       id,
+      description: insertEvent.description || null,
+      imageUrl: insertEvent.imageUrl || null,
       soldTickets: 0,
       contractAddress: null,
       createdBy: null,
@@ -163,6 +167,7 @@ export class MemStorage implements IStorage {
     const credential: FanCredential = {
       ...insertCredential,
       id,
+      credentialData: insertCredential.credentialData || null,
       issuedAt: new Date()
     };
     this.fanCredentials.set(id, credential);

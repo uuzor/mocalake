@@ -207,13 +207,20 @@ export default function Events() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isConnected, userAddress, userDid, airService } = useMocaKit();
+  const { isConnected, userAddress, userUUID, mocaService } = useMocaKit();
 
   const purchaseTicketMutation = useMutation({
-    mutationFn: async ({ event, userDid }: { event: Event; userDid: string }) => {
+    mutationFn: async ({ event }: { event: Event }) => {
       if (!userAddress) {
         throw new Error("Wallet not connected");
       }
+
+      if (!mocaService) {
+        throw new Error("MOCA service not initialized");
+      }
+
+      // Use userUUID as DID for now (this should be the actual DID from the service)
+      const userDid = userUUID || `did:air:user:${userAddress?.slice(2, 10)}`;
 
       // Step 1: Get user ID by wallet address
       const userResponse = await fetch(`/api/users/wallet/${userAddress}`);
@@ -274,11 +281,7 @@ export default function Events() {
       const { token } = await jwtResponse.json();
 
       // Step 4: Issue credential using AIR Kit
-      if (!airService) {
-        throw new Error('AIR Service not initialized');
-      }
-
-      await airService.issueCredential({
+      await mocaService.issueCredential({
         authToken: token,
         credentialId: credentialConfig.credentialId,
         credentialSubject: credentialSubject,
@@ -314,16 +317,16 @@ export default function Events() {
       return;
     }
 
-    if (!userDid) {
+    if (!mocaService) {
       toast({
-        title: "User DID not available",
-        description: "Please wait for the wallet to fully initialize.",
+        title: "MOCA service not ready",
+        description: "Please wait for the service to fully initialize.",
         variant: "destructive",
       });
       return;
     }
 
-    purchaseTicketMutation.mutate({ event, userDid });
+    purchaseTicketMutation.mutate({ event });
   };
 
   if (error) {
