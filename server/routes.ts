@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertUserSchema, insertEventSchema, insertTicketSchema, insertFanCredentialSchema } from "@shared/schema";
+import { generateJwt } from "./jwt";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -232,6 +233,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ user });
     } catch (error) {
       res.status(500).json({ error: "Authentication failed" });
+    }
+  });
+
+  // JWT generation endpoint for credential issuance
+  app.post("/api/auth/jwt", async (req, res) => {
+    try {
+      const { partnerId } = req.body;
+      
+      if (!partnerId) {
+        return res.status(400).json({ error: "Partner ID required" });
+      }
+      
+      // Get private key from environment (should be set securely)
+      const privateKey = process.env.MOCA_PRIVATE_KEY;
+      if (!privateKey) {
+        return res.status(500).json({ error: "Server configuration error: Private key not found" });
+      }
+      
+      const jwt = await generateJwt({ partnerId, privateKey });
+      
+      if (!jwt) {
+        return res.status(500).json({ error: "Failed to generate JWT" });
+      }
+      
+      res.json({ token: jwt });
+    } catch (error) {
+      console.error("JWT generation error:", error);
+      res.status(500).json({ error: "JWT generation failed" });
+    }
+  });
+
+  // Ticket purchase endpoint with credential issuance
+  app.post("/api/tickets/purchase", async (req, res) => {
+    try {
+      const { eventId, userId, userDid } = req.body;
+      
+      if (!eventId || !userId || !userDid) {
+        return res.status(400).json({ error: "Event ID, User ID, and User DID required" });
+      }
+      
+      // Get event details
+      const event = await storage.getEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found" });
+      }
+      
+      // Check if event is sold out
+      const soldTickets = event.soldTickets || 0;
+      if (soldTickets >= event.maxTickets) {
+        return res.status(400).json({ error: "Event is sold out" });
+      }
+      
+      // Get user details
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      // Create ticket record in database
+      const ticketData = {
+        eventId: event.id,
+        ownerId: user.id,
+        purchasePrice: event.ticketPrice
+      };
+      
+      const ticket = await storage.createTicket(ticketData);
+      
+      // Update event sold tickets count
+      await storage.updateEvent(event.id, {
+        soldTickets: soldTickets + 1
+      });
+      
+      // Prepare credential subject data for issuance
+      const credentialSubject = {
+        ticketId: ticket.id,
+        eventName: event.title,
+        artistName: event.artistName,
+        eventDate: event.eventDate.toISOString().split('T')[0], // YYYY-MM-DD format
+        venue: event.venue,
+        ticketType: "general", // Default type, could be extended
+        purchasePrice: event.ticketPrice.toString(),
+        originalBuyer: userDid,
+        transferable: false, // Anti-scalping measure
+        purchaseTimestamp: new Date().toISOString().split('T')[0],
+        validUntil: event.eventDate.toISOString().split('T')[0],
+        seatInfo: "General Admission", // Default, could be extended
+        isUsed: false,
+        maxResalePrice: Math.floor(event.ticketPrice * 1.1).toString() // 10% markup max
+      };
+      
+      res.json({ 
+        ticket,
+        credentialSubject,
+        message: "Ticket purchased successfully. Ready for credential issuance." 
+      });
+    } catch (error) {
+      console.error("Ticket purchase error:", error);
+      res.status(500).json({ error: "Ticket purchase failed" });
     }
   });
 

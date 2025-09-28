@@ -14,6 +14,8 @@ import TicketCard from "@/components/TicketCard";
 import { mockEvents, mockUser, mockCredentials, mockTickets } from "@/lib/mockData";
 import { useMocaKit } from "@/hooks/useMocaKit";
 import NotFound from "@/pages/not-found";
+import Events from "@/pages/events";
+import CreateEvent from "@/pages/create-event";
 
 function Home() {
   const { isConnected } = useMocaKit();
@@ -117,6 +119,8 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/events" component={Events} />
+      <Route path="/create-event" component={CreateEvent} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -1,19 +1,28 @@
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { Wallet, Menu } from "lucide-react";
+import { Wallet, Menu, Plus } from "lucide-react";
 import { useState } from "react";
 import { useMocaKit } from "@/hooks/useMocaKit";
+import { Link, useLocation } from "wouter";
 
 export default function Navigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { isConnected, userAddress, connectWallet } = useMocaKit();
+  const [location] = useLocation();
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
+  const closeMobileMenu = () => {
+    setIsMobileMenuOpen(false);
+  };
+
   const scrollToSection = (sectionId: string) => {
-    document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth" });
+    // Only scroll if we're on the home page
+    if (location === "/") {
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth" });
+    }
     setIsMobileMenuOpen(false);
   };
 
@@ -23,34 +32,52 @@ export default function Navigation() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex items-center">
-            <div className="text-xl font-heading font-bold text-primary">
-              MocaLake
-            </div>
+            <Link href="/">
+              <div className="text-xl font-heading font-bold text-primary cursor-pointer hover:opacity-80 transition-opacity">
+                MocaLake
+              </div>
+            </Link>
           </div>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <button
-              onClick={() => scrollToSection("features")}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-              data-testid="nav-features"
-            >
-              Features
-            </button>
-            <button
-              onClick={() => scrollToSection("how-it-works")}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-              data-testid="nav-how-it-works"
-            >
-              How It Works
-            </button>
-            <button
-              onClick={() => scrollToSection("events")}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-              data-testid="nav-events"
-            >
-              Events
-            </button>
+            <Link href="/events">
+              <button
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                data-testid="nav-events"
+              >
+                Events
+              </button>
+            </Link>
+            {isConnected && (
+              <Link href="/create-event">
+                <button
+                  className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
+                  data-testid="nav-create-event"
+                >
+                  <Plus className="h-4 w-4" />
+                  Create Event
+                </button>
+              </Link>
+            )}
+            {location === "/" && (
+              <>
+                <button
+                  onClick={() => scrollToSection("features")}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  data-testid="nav-features"
+                >
+                  Features
+                </button>
+                <button
+                  onClick={() => scrollToSection("how-it-works")}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  data-testid="nav-how-it-works"
+                >
+                  How It Works
+                </button>
+              </>
+            )}
           </div>
 
           {/* Desktop Actions */}
@@ -89,27 +116,45 @@ export default function Navigation() {
         {isMobileMenuOpen && (
           <div className="md:hidden py-4 border-t">
             <div className="flex flex-col space-y-3">
-              <button
-                onClick={() => scrollToSection("features")}
-                className="text-left text-muted-foreground hover:text-foreground transition-colors py-2"
-                data-testid="mobile-nav-features"
-              >
-                Features
-              </button>
-              <button
-                onClick={() => scrollToSection("how-it-works")}
-                className="text-left text-muted-foreground hover:text-foreground transition-colors py-2"
-                data-testid="mobile-nav-how-it-works"
-              >
-                How It Works
-              </button>
-              <button
-                onClick={() => scrollToSection("events")}
-                className="text-left text-muted-foreground hover:text-foreground transition-colors py-2"
-                data-testid="mobile-nav-events"
-              >
-                Events
-              </button>
+              <Link href="/events">
+                <button
+                  onClick={closeMobileMenu}
+                  className="text-left text-muted-foreground hover:text-foreground transition-colors py-2 w-full"
+                  data-testid="mobile-nav-events"
+                >
+                  Events
+                </button>
+              </Link>
+              {isConnected && (
+                <Link href="/create-event">
+                  <button
+                    onClick={closeMobileMenu}
+                    className="text-left text-muted-foreground hover:text-foreground transition-colors py-2 w-full flex items-center gap-2"
+                    data-testid="mobile-nav-create-event"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Create Event
+                  </button>
+                </Link>
+              )}
+              {location === "/" && (
+                <>
+                  <button
+                    onClick={() => scrollToSection("features")}
+                    className="text-left text-muted-foreground hover:text-foreground transition-colors py-2"
+                    data-testid="mobile-nav-features"
+                  >
+                    Features
+                  </button>
+                  <button
+                    onClick={() => scrollToSection("how-it-works")}
+                    className="text-left text-muted-foreground hover:text-foreground transition-colors py-2"
+                    data-testid="mobile-nav-how-it-works"
+                  >
+                    How It Works
+                  </button>
+                </>
+              )}
               
               <div className="pt-3 border-t">
                 {isConnected && userAddress ? (
